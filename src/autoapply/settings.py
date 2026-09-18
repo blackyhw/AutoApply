@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
+from typing import Annotated
 
 from pydantic import EmailStr, Field, field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
 def _repo_root() -> Path:
@@ -64,7 +66,7 @@ class Settings(BaseSettings):
     cv_blocks_path: Path = Path("config/cv_blocks.yaml")
     cover_letter_template_path: Path = Path("config/cover_letter.template.txt")
     file_feed_path: Path = Path("data/samples/vacancies.json")
-    enabled_collectors: list[str] = Field(
+    enabled_collectors: Annotated[list[str], NoDecode] = Field(
         default_factory=lambda: ["file_feed", "linkedin", "computrabajo", "indeed"]
     )
     collector_max_per_portal: int = 12
@@ -86,7 +88,12 @@ class Settings(BaseSettings):
     @classmethod
     def _split_collectors(cls, value):
         if isinstance(value, str):
-            return [item.strip() for item in value.split(",") if item.strip()]
+            text = value.strip()
+            if text.startswith("["):
+                parsed = json.loads(text)
+                if isinstance(parsed, list):
+                    return [str(item).strip() for item in parsed if str(item).strip()]
+            return [item.strip() for item in text.split(",") if item.strip()]
         return value
 
     def resolve(self) -> "Settings":
