@@ -8,6 +8,7 @@ from email.message import Message
 from email.utils import parseaddr
 
 from autoapply.errors import ConfigurationError
+from autoapply.notify.mailer import usable_mail_host
 from autoapply.settings import Settings
 
 
@@ -30,7 +31,9 @@ class ImapInbox:
         self.settings = settings
 
     def configured(self) -> bool:
-        return bool(self.settings.agent_email_imap_host and self.settings.agent_email_imap_username)
+        return usable_mail_host(self.settings.agent_email_imap_host) and bool(
+            self.settings.agent_email_imap_username
+        )
 
     def fetch_unseen(self, limit: int = 40) -> list[IncomingEmail]:
         if not self.configured():

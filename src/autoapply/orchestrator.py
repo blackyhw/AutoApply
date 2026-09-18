@@ -220,7 +220,12 @@ class Agent:
             return
         scheduler = self._scheduler(repo)
         seen_ids: list[str] = []
-        for item in self.inbox.fetch_unseen():
+        try:
+            unseen = self.inbox.fetch_unseen()
+        except Exception as exc:
+            log.warning("inbox_unavailable", error=str(exc))
+            return
+        for item in unseen:
             try:
                 proposal = await self.meeting_parser.parse(
                     message_id=item.message_id,

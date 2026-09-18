@@ -10,8 +10,16 @@ from autoapply.settings import Settings
 log = get_logger("notify.mailer")
 
 
+def usable_mail_host(host: str | None) -> bool:
+    """Ignore empty and *.example.com placeholders from .env.example."""
+    value = (host or "").strip().lower()
+    if not value:
+        return False
+    return not (value == "example.com" or value.endswith(".example.com"))
+
+
 def smtp_configured(settings: Settings) -> bool:
-    return bool(settings.agent_email_smtp_host)
+    return usable_mail_host(settings.agent_email_smtp_host)
 
 
 def send_email(

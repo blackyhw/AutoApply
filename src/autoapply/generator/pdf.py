@@ -10,11 +10,16 @@ from autoapply.logging import get_logger
 
 log = get_logger("generator.pdf")
 
-_FONT_CANDIDATES = (
-    Path("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"),
-    Path("/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"),
-    Path("/usr/share/fonts/truetype/freefont/FreeSans.ttf"),
-)
+def _font_candidates() -> tuple[Path, ...]:
+    windir = Path(__import__("os").environ.get("WINDIR", r"C:\Windows"))
+    return (
+        Path("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"),
+        Path("/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"),
+        Path("/usr/share/fonts/truetype/freefont/FreeSans.ttf"),
+        windir / "Fonts" / "arial.ttf",
+        windir / "Fonts" / "segoeui.ttf",
+        windir / "Fonts" / "calibri.ttf",
+    )
 
 
 def render_cv_pdf(text: str, path: Path) -> Path:
@@ -25,7 +30,7 @@ def render_cv_pdf(text: str, path: Path) -> Path:
     pdf = FPDF()
     pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
-    font_path = next((candidate for candidate in _FONT_CANDIDATES if candidate.exists()), None)
+    font_path = next((candidate for candidate in _font_candidates() if candidate.exists()), None)
     if font_path:
         pdf.add_font("CvSans", "", str(font_path))
         pdf.set_font("CvSans", size=11)
