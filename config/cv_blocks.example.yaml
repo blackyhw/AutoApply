@@ -1,0 +1,66 @@
+# Copy to cv_blocks.yaml. The generator may only COMBINE these blocks.
+# It cannot invent new experience, employers, or dates.
+
+blocks:
+  - id: header
+    section: header
+    always_include: true
+    content: |
+      Nombre Apellido
+      Backend developer — Buenos Aires, Argentina
+      jobs-agent@example.com
+
+  - id: summary_backend
+    section: summary
+    tags: [python, backend]
+    content: |
+      Desarrollador backend con experiencia diseñando APIs, servicios y
+      pipelines de datos. Enfocado en Python, SQL y sistemas confiables.
+
+  - id: summary_fullstack
+    section: summary
+    tags: [python, frontend, fullstack]
+    content: |
+      Desarrollador fullstack con foco en productos web, APIs y entrega
+      continua. Combino backend en Python con interfaces claras y mantenibles.
+
+  - id: exp_api_platform
+    section: experience
+    tags: [python, fastapi, postgresql]
+    content: |
+      Plataforma de APIs (2022 — actualidad)
+      - Diseñé servicios HTTP con autenticación, límites de tasa y observabilidad.
+      - Modelé datos relacionales y migraciones con PostgreSQL.
+
+  - id: exp_automation
+    section: experience
+    tags: [python, automation, integrations]
+    content: |
+      Automatización e integraciones (2020 — 2022)
+      - Conecté sistemas internos con conectores HTTP y colas.
+      - Reduje trabajo manual con jobs programados y alertas.
+
+  - id: skills_core
+    section: skills
+    always_include: true
+    tags: [python]
+    content: |
+      Python, FastAPI, SQLAlchemy, PostgreSQL, Docker, Git, CI.
+
+  - id: skills_cloud
+    section: skills
+    tags: [aws, docker, kubernetes]
+    content: |
+      AWS, Docker, Kubernetes, observabilidad (logs/metrics/traces).
+
+  - id: education
+    section: education
+    always_include: true
+    content: |
+      Título / certificación — Institución, año.
+
+  - id: languages
+    section: languages
+    always_include: true
+    content: |
+      Español (nativo), Inglés (profesional).

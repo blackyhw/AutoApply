@@ -1,0 +1,45 @@
+# Copy to profile.yaml and fill with real data. This file is safe to commit.
+
+identity:
+  full_name: "Nombre Apellido"
+  headline: "Backend developer"
+  location: "Buenos Aires, Argentina"
+  years_experience: 5
+  dedicated_email: "jobs-agent@example.com"
+  phone: ""
+  links:
+    linkedin: ""
+    github: ""
+    portfolio: ""
+
+target:
+  roles:
+    - "Backend Developer"
+    - "Python Developer"
+    - "Software Engineer"
+  keywords:
+    - python
+    - fastapi
+    - postgresql
+  locations:
+    - "Buenos Aires"
+    - "Remote"
+    - "LATAM"
+  work_modes:
+    - remote
+    - hybrid
+  seniority:
+    - semi-senior
+    - senior
+  min_salary_ars: null
+  min_salary_usd: null
+  languages:
+    - es
+    - en
+
+constraints:
+  exclude_keywords:
+    - unpaid
+    - commission-only
+    - crypto-trader
+  require_work_authorization: true

@@ -1,0 +1,36 @@
+# Secrets and local config
+.env
+.env.*
+!.env.example
+config/profile.yaml
+config/cv_blocks.yaml
+*.session
+playwright/.auth/
+
+# Runtime data
+data/*.db
+data/*.db-journal
+data/*.sqlite
+data/heartbeat.json
+data/generated/
+!data/samples/
+secrets/*
+!secrets/.gitkeep
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+dist/
+build/
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/
+*.swp

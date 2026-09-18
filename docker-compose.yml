@@ -1,0 +1,32 @@
+# The agent is intended to run on an isolated VM/VPS, never on a personal laptop.
+# Keep secrets in .env (not committed). The dedicated mailbox is the only identity
+# this process should hold.
+
+services:
+  agent:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    command: ["python", "-m", "autoapply", "run"]
+    volumes:
+      - ./data:/app/data
+      - ./config:/app/config:ro
+      - ./secrets:/app/secrets:ro
+    security_opt:
+      - no-new-privileges:true
+    read_only: false
+    mem_limit: 1g
+
+  watchdog:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    command: ["python", "-m", "autoapply", "watchdog", "--loop"]
+    depends_on:
+      - agent
+    volumes:
+      - ./data:/app/data
+      - ./config:/app/config:ro
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 256m

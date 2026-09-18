@@ -1,0 +1,43 @@
+# Default runtime config. Secrets live in the environment / .env, not here.
+
+agent:
+  dry_run: true
+  kill_switch: false
+  timezone: America/Argentina/Buenos_Aires
+  poll_interval_seconds: 900
+  max_applies_per_day: 10
+  match_threshold: 0.72
+  dedicated_email: jobs-agent@example.com
+
+collectors:
+  enabled:
+    - file_feed
+    # - linkedin
+    # - indeed
+    # - computrabajo
+  file_feed_path: data/samples/vacancies.json
+
+llm:
+  primary: gemini
+  fallback: groq
+  gemini_model: gemini-2.5-flash
+  groq_model: llama-3.3-70b-versatile
+  temperature: 0.2
+  max_output_tokens: 1024
+
+heartbeat:
+  interval_hours: 24
+  stale_after_hours: 26
+
+calendar:
+  working_hours_start: "09:00"
+  working_hours_end: "18:00"
+  meeting_duration_minutes: 30
+  auto_reschedule: false
+
+paths:
+  profile: config/profile.yaml
+  cv_blocks: config/cv_blocks.yaml
+  cover_letter_template: config/cover_letter.template.txt
+  sqlite: data/autoapply.db
+  heartbeat: data/heartbeat.json

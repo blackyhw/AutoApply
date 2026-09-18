@@ -1,0 +1,11 @@
+Asunto: Postulación — {role} en {company}
+
+Hola {recruiter_name},
+
+Me postulo al rol de {role} en {company}. {matching_skills_sentence}
+
+Adjunto mi CV. Quedo disponible para coordinar una conversación en {availability_window}.
+
+Saludos,
+{candidate_name}
+{dedicated_email}

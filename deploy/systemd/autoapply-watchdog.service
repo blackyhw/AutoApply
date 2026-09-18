@@ -1,0 +1,10 @@
+[Unit]
+Description=AutoApply heartbeat watchdog
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=autoapply
+WorkingDirectory=/opt/autoapply
+EnvironmentFile=/opt/autoapply/.env
+ExecStart=/opt/autoapply/.venv/bin/python -m autoapply watchdog
