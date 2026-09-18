@@ -6,7 +6,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     AUTOAPPLY_HOME=/app
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates tzdata \
+    && apt-get install -y --no-install-recommends ca-certificates tzdata fonts-dejavu-core \
     && rm -rf /var/lib/apt/lists/* \
     && useradd --create-home --uid 10001 --shell /usr/sbin/nologin agent
 

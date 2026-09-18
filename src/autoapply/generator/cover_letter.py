@@ -7,6 +7,7 @@ from string import Template
 from autoapply.domain.models import ApplicationPackage, MatchDecision, Profile
 from autoapply.errors import TemplateError
 from autoapply.generator.cv_assembler import CvAssembler
+from autoapply.generator.pdf import render_cv_pdf
 
 ALLOWED_PLACEHOLDERS = {
     "recruiter_name",
@@ -62,12 +63,18 @@ class ApplicationGenerator:
         self.assembler = assembler
         self.renderer = renderer
 
-    def build(self, decision: MatchDecision, profile: Profile) -> ApplicationPackage:
+    def build(self, decision: MatchDecision, profile: Profile, pdf_path=None) -> ApplicationPackage:
         cv_text = self.assembler.assemble(decision.selected_block_ids)
         subject, letter = self.renderer.render(decision.cover_letter_fields, profile)
+        cv_pdf_path = None
+        if pdf_path is not None:
+            cv_pdf_path = str(render_cv_pdf(cv_text, pdf_path))
         return ApplicationPackage(
             cv_text=cv_text,
             cover_letter=letter,
             cover_subject=subject,
             selected_block_ids=decision.selected_block_ids,
+            cv_pdf_path=cv_pdf_path,
+            candidate_email=profile.dedicated_email,
+            candidate_name=profile.full_name,
         )

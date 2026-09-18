@@ -12,10 +12,12 @@ agent:
 collectors:
   enabled:
     - file_feed
-    # - linkedin
-    # - indeed
-    # - computrabajo
+    - linkedin
+    - computrabajo
+    - indeed
   file_feed_path: data/samples/vacancies.json
+  max_per_portal: 12
+  delay_seconds: 1.2
 
 llm:
   primary: gemini

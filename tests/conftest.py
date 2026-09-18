@@ -35,4 +35,5 @@ def settings(tmp_path: Path) -> Settings:
         dry_run=True,
         gemini_api_key="",
         groq_api_key="",
+        generated_dir=tmp_path / "generated",
     )

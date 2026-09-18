@@ -1,0 +1,11 @@
+Asunto: Reprogramación de reunión — {title}
+
+Hola,
+
+El horario propuesto ({original_start}) choca con otra cita. Puedo el {new_start}.
+
+Si ese slot no sirve, proponé otro en días hábiles, 9 a 18 hs.
+
+Saludos,
+{candidate_name}
+{dedicated_email}

@@ -3,13 +3,13 @@ from __future__ import annotations
 from hashlib import sha256
 from typing import Protocol
 
-from autoapply.domain.models import Vacancy
+from autoapply.domain.models import Profile, Vacancy
 
 
 class VacancyCollector(Protocol):
     name: str
 
-    async def collect(self) -> list[Vacancy]:
+    async def collect(self, profile: Profile | None = None) -> list[Vacancy]:
         """Return vacancies from one portal. Must not mutate agent state."""
 
 

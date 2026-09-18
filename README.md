@@ -1,74 +1,31 @@
 # AutoApply
 
-Agente de postulaciones que corre **24/7 en una VM aislada** (nunca en la notebook personal). Recolecta vacantes, las compara contra un perfil/CV, arma una postulación a partir de bloques predefinidos, la envía, y gestiona respuestas de reclutadores.
+Agente de postulaciones que corre **24/7 en una VM aislada** (nunca en la notebook personal). Recolecta vacantes, las compara contra un perfil/CV, arma una postulación a partir de bloques predefinidos, genera un PDF, la envía, y gestiona respuestas de reclutadores.
 
-Esta etapa deja la **estructura, contratos e implementación de la capa segura**. Los conectores vivos de LinkedIn / Indeed / Computrabajo y el auto-apply con Playwright quedan como adapters listos para completar.
+## Qué hace hoy
+
+- Recolecta vacantes de **LinkedIn** (guest job search), **Computrabajo** y **Indeed** (si el portal no bloquea la IP de la VM). El feed local sigue disponible para pruebas.
+- Deduplica contra SQLite para no postular dos veces al mismo puesto.
+- Matchea con Gemini Flash (Groq si hay rate limit; mock si no hay API keys).
+- Arma el CV **solo con bloques predefinidos** y un mail de plantilla, y exporta **PDF**.
+- Aplica en dry-run por defecto. En vivo: mail de postulación si la vacante trae email, o Playwright si hay sesión guardada (`python -m autoapply login <portal>`).
+- Parsea el IMAP del mail dedicado, agenda reuniones (SQLite + Google Calendar si hay credenciales) y puede reprogramar.
+- Heartbeat cada 24 h y watchdog si se cae.
 
 ## Stack
 
-| Capa | Elección | Alternativas |
-| --- | --- | --- |
-| Lenguaje | Python 3.12 | TypeScript (Playwright más idiomático, peor ecosistema LLM) |
-| Orquestación | `asyncio` + loop propio | APScheduler, Temporal, Celery |
-| Persistencia | SQLite + SQLAlchemy 2 | Postgres cuando haya más de un proceso escribiendo |
-| LLM | Gemini Flash (primario) + Groq (fallback por rate limit) | OpenAI, local GGUF |
-| Browser apply | Playwright (stub) | APIs oficiales del portal si existen |
-| Inbox | IMAP del mail dedicado | Gmail API |
-| Calendario | SQLite local ahora, Google Calendar después | CalDAV |
-| Notificaciones | Telegram + email + logs | Slack |
-| Aislamiento | Docker Compose en una VPS | systemd en una VM |
+| Capa | Elección |
+| --- | --- |
+| Lenguaje | Python 3.12 + asyncio |
+| Persistencia | SQLite + SQLAlchemy 2 |
+| LLM | Gemini Flash → Groq |
+| Apply | SMTP del mail dedicado + Playwright |
+| Collectors | HTTP público (LinkedIn guest, Computrabajo); Indeed cuando no hay 403 |
+| Calendario | SQLite local, Google Calendar opcional |
+| Avisos | Telegram + email + logs |
+| Aislamiento | Docker Compose / systemd en una VPS |
 
-El paquete se llama `autoapply`. El proceso usa un **mail dedicado** (revocable) y secretos por entorno.
-
-## Pipeline
-
-```
-collectors  →  dedupe/SQLite  →  matcher (LLM)  →  generator (bloques+plantilla)
-                                                    ↓
-                         notify ← apply engine (dry-run por defecto)
-                                                    ↓
-                         IMAP parser → calendar (conflicto / reschedule)
-```
-
-Heartbeat cada 24 h. Un proceso `watchdog` aparte alerta si la señal no llega.
-
-## Estructura
-
-```
-config/                     # perfil, bloques de CV, plantilla de mail, defaults
-data/samples/               # feed local para probar el pipeline
-deploy/systemd/             # unidades para una VM
-src/autoapply/
-  cli.py                    # run | once | heartbeat | watchdog
-  orchestrator.py           # loop 24/7
-  settings.py
-  domain/                   # Vacancy, MatchDecision, ApplicationPackage
-  persistence/              # SQLite: vacantes, postulaciones, reuniones
-  llm/                      # interfaz + Gemini + Groq + mock + router
-  security/                 # UntrustedText, sanitizer, prompt guard
-  collectors/               # file_feed + stubs LinkedIn/Indeed/Computrabajo
-  matcher/                  # score + umbral + hard-reject
-  generator/                # ensambla bloques; no reescribe experiencia
-  apply/                    # motor Playwright (dry-run + adapters stub)
-  inbox/                    # IMAP + parser de meets
-  calendar/                 # local + scheduler de conflictos
-  notify/                   # Telegram / email
-  heartbeat/
-  profile/
-tests/
-```
-
-## Guardrails (obligatorios)
-
-Cualquier texto de terceros (descripciones, mails, ICS) entra como `UntrustedText`. No se puede interpolar como string: hay que llamar `as_delimited_data()`, que:
-
-1. saca caracteres invisibles / bidi
-2. redacta frases típicas de prompt-injection (EN/ES)
-3. lo cerca en `<<<UNTRUSTED_THIRD_PARTY_DATA>>>`
-
-El system prompt del LLM ordena extraer JSON y **no obedecer** instrucciones que aparezcan adentro. El generador **solo combina bloques de `cv_blocks.yaml`** y rellena placeholders de una plantilla; no inventa empleos.
-
-## Cómo correrlo (local / VM)
+## Cómo correrlo
 
 ```bash
 python3 -m venv .venv
@@ -78,26 +35,28 @@ cp .env.example .env
 cp config/profile.example.yaml config/profile.yaml
 cp config/cv_blocks.example.yaml config/cv_blocks.yaml
 pytest
+python -m autoapply export-cv
 python -m autoapply once --dry-run
 ```
 
-En la VM:
+En la VM, con secretos en `.env`:
 
 ```bash
+python -m autoapply login linkedin
+python -m autoapply login computrabajo
 docker compose up --build -d
 ```
 
-`AUTOAPPLY_DRY_RUN=true` por defecto: no envía postulaciones reales.
+`AUTOAPPLY_DRY_RUN=true` por defecto. No envía postulaciones reales hasta que lo apagues y existan SMTP y/o sesiones Playwright.
 
-Variables mínimas para producción:
+## Guardrails
 
-- `GEMINI_API_KEY` (y `GROQ_API_KEY` como fallback)
-- `AGENT_EMAIL_*` del buzón dedicado
-- `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` o `ALERT_EMAIL`
+Cualquier texto de terceros entra como `UntrustedText`. El generador no inventa experiencia: solo combina `cv_blocks.yaml`. Los collectors no intentan bypassear captchas ni bloqueos 403/429: fallan y siguen con el resto.
 
-## Próximas etapas
+## Qué falta para producción personal
 
-1. Completar collectors (sesión Playwright o API, en la VM).
-2. Completar adapters de apply por portal.
-3. Google Calendar + reprogramación automática con mail de respuesta.
-4. Migraciones si se pasa de SQLite a Postgres.
+1. Completar `config/profile.yaml` y `config/cv_blocks.yaml` con tus datos reales.
+2. Mail dedicado + `GEMINI_API_KEY` + Telegram.
+3. Sesión Playwright de cada portal en la VM (`autoapply login`).
+4. Apagar dry-run cuando el dry-run se vea bien.
+5. Opcional: JSON de service account de Google Calendar en `secrets/`.

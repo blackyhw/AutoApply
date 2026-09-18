@@ -3,13 +3,18 @@ from __future__ import annotations
 import argparse
 import asyncio
 import logging
+from pathlib import Path
 
+from autoapply.apply.browser import capture_login
+from autoapply.generator.blocks import BlockCatalog
+from autoapply.generator.cv_assembler import CvAssembler
+from autoapply.generator.pdf import render_cv_pdf
 from autoapply.heartbeat.watchdog import HeartbeatWatchdog
 from autoapply.logging import configure_logging
 from autoapply.notify.composite import CompositeNotifier, LogNotifier
 from autoapply.notify.emailer import EmailNotifier
 from autoapply.notify.telegram import TelegramNotifier
-from autoapply.orchestrator import Agent
+from autoapply.orchestrator import Agent, _existing_or_example
 from autoapply.settings import load_settings
 
 
@@ -27,6 +32,11 @@ def main(argv: list[str] | None = None) -> int:
 
     watch_p = sub.add_parser("watchdog", help="Alert if the heartbeat is stale")
     watch_p.add_argument("--loop", action="store_true")
+
+    login_p = sub.add_parser("login", help="Capture a Playwright session for a portal")
+    login_p.add_argument("portal", choices=["linkedin", "indeed", "computrabajo"])
+
+    sub.add_parser("export-cv", help="Render the CV blocks to a PDF")
 
     args = parser.parse_args(argv)
     configure_logging(logging.INFO)
@@ -58,6 +68,18 @@ def main(argv: list[str] | None = None) -> int:
         else:
             ok = asyncio.run(watchdog.check())
             return 0 if ok else 2
+    if args.command == "login":
+        state = Path(settings.playwright_state_dir) / f"{args.portal}.json"
+        asyncio.run(capture_login(args.portal, state))
+        print(f"Saved session to {state}")
+        return 0
+    if args.command == "export-cv":
+        blocks = BlockCatalog.from_yaml(_existing_or_example(Path(settings.cv_blocks_path)))
+        text = CvAssembler(blocks).assemble([])
+        path = Path(settings.generated_dir) / "cv.pdf"
+        render_cv_pdf(text, path)
+        print(path)
+        return 0
     return 1
 
 

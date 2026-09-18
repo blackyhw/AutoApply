@@ -34,6 +34,8 @@ class Vacancy(BaseModel):
     url: str
     description: str
     posted_at: datetime | None = None
+    apply_email: str | None = None
+    apply_url: str | None = None
     raw_payload: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -51,6 +53,9 @@ class ApplicationPackage(BaseModel):
     cover_letter: str
     cover_subject: str
     selected_block_ids: list[str]
+    cv_pdf_path: str | None = None
+    candidate_email: str = ""
+    candidate_name: str = ""
 
 
 class ApplyOutcome(BaseModel):

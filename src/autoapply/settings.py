@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from pydantic import EmailStr, Field
+from pydantic import EmailStr, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -64,12 +64,30 @@ class Settings(BaseSettings):
     cv_blocks_path: Path = Path("config/cv_blocks.yaml")
     cover_letter_template_path: Path = Path("config/cover_letter.template.txt")
     file_feed_path: Path = Path("data/samples/vacancies.json")
-    enabled_collectors: list[str] = Field(default_factory=lambda: ["file_feed"])
+    enabled_collectors: list[str] = Field(
+        default_factory=lambda: ["file_feed", "linkedin", "computrabajo", "indeed"]
+    )
+    collector_max_per_portal: int = 12
+    collector_delay_seconds: float = 1.2
+    fetch_job_details: bool = True
+    indeed_host: str = "ar.indeed.com"
+    computrabajo_base_url: str = "https://www.computrabajo.com.ar"
+    generated_dir: Path = Path("data/generated")
+    playwright_state_dir: Path = Path("secrets/playwright")
+    review_first_n: int = 0
 
     working_hours_start: str = "09:00"
     working_hours_end: str = "18:00"
     meeting_duration_minutes: int = 30
     auto_reschedule: bool = False
+
+
+    @field_validator("enabled_collectors", mode="before")
+    @classmethod
+    def _split_collectors(cls, value):
+        if isinstance(value, str):
+            return [item.strip() for item in value.split(",") if item.strip()]
+        return value
 
     def resolve(self) -> "Settings":
         """Resolve relative paths against the repository root when needed."""

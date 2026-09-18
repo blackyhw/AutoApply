@@ -17,7 +17,7 @@ class FileFeedCollector:
     def __init__(self, path: Path):
         self.path = path
 
-    async def collect(self) -> list[Vacancy]:
+    async def collect(self, profile=None) -> list[Vacancy]:
         if not self.path.exists():
             return []
         payload = json.loads(self.path.read_text(encoding="utf-8"))
