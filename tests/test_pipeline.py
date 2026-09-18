@@ -10,7 +10,7 @@ async def test_once_cycle_applies_match_and_rejects_excluded(settings: Settings)
     stats = await agent.run_once()
     assert stats["collected"] == 2
     assert stats["new"] == 2
-    # sample-001 matches mock LLM; sample-002 is keyword-excluded
+    # sample-001 matches keyword overlap; sample-002 is keyword-excluded
     assert stats["applied"] == 1
     assert stats["rejected"] == 1
     assert stats["review"] == 0

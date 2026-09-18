@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
 from urllib.parse import quote_plus
 from xml.etree import ElementTree
 
+from autoapply.collectors.browser_fetch import PublicPageFetcher
 from autoapply.collectors.http import PoliteClient
 from autoapply.collectors.parseutil import extract_apply_email, soup, text_of
 from autoapply.collectors.queries import search_queries
@@ -12,6 +14,8 @@ from autoapply.errors import CollectorError
 from autoapply.logging import get_logger
 
 log = get_logger("collectors.indeed")
+
+BrowserFetch = Callable[[str], Awaitable[str]]
 
 
 class IndeedCollector:
@@ -23,45 +27,72 @@ class IndeedCollector:
         *,
         country_host: str = "ar.indeed.com",
         max_per_portal: int = 15,
+        browser_fetch: BrowserFetch | None = None,
     ):
         self.client = client or PoliteClient()
         self.country_host = country_host
         self.max_per_portal = max_per_portal
+        self.browser_fetch = browser_fetch
 
     async def collect(self, profile: Profile | None = None) -> list[Vacancy]:
         profile = profile or Profile(full_name="x", dedicated_email="jobs-agent@example.com")
         vacancies: list[Vacancy] = []
         seen: set[str] = set()
         last_error: CollectorError | None = None
-        for query in search_queries(profile):
-            location = query.location or "Argentina"
-            rss = (
-                f"https://{self.country_host}/rss?q={quote_plus(query.keywords)}"
-                f"&l={quote_plus(location)}"
-            )
-            html_url = (
-                f"https://{self.country_host}/jobs?q={quote_plus(query.keywords)}"
-                f"&l={quote_plus(location)}&sort=date"
-            )
-            batch: list[Vacancy] = []
-            try:
-                payload = await self.client.get_text(rss)
-                batch = parse_indeed_rss(payload)
-            except CollectorError as exc:
-                last_error = exc
-                log.info("indeed_rss_unavailable", error=str(exc))
-                try:
-                    payload = await self.client.get_text(html_url)
-                    batch = parse_indeed_search(payload, base=f"https://{self.country_host}")
-                except CollectorError as exc2:
-                    last_error = exc2
-            for vacancy in batch:
-                if vacancy.external_id in seen:
-                    continue
-                seen.add(vacancy.external_id)
-                vacancies.append(vacancy)
-                if len(vacancies) >= self.max_per_portal:
-                    return vacancies
+        use_browser = False
+        session: PublicPageFetcher | None = None
+        try:
+            for query in search_queries(profile):
+                location = query.location or "Argentina"
+                rss = (
+                    f"https://{self.country_host}/rss?q={quote_plus(query.keywords)}"
+                    f"&l={quote_plus(location)}"
+                )
+                html_url = (
+                    f"https://{self.country_host}/jobs?q={quote_plus(query.keywords)}"
+                    f"&l={quote_plus(location)}&sort=date"
+                )
+                batch: list[Vacancy] = []
+                if not use_browser:
+                    try:
+                        payload = await self.client.get_text(rss)
+                        batch = parse_indeed_rss(payload)
+                    except CollectorError as exc:
+                        last_error = exc
+                        log.info("indeed_rss_unavailable", error=str(exc))
+                        try:
+                            payload = await self.client.get_text(html_url)
+                            batch = parse_indeed_search(
+                                payload, base=f"https://{self.country_host}"
+                            )
+                        except CollectorError as exc2:
+                            last_error = exc2
+                            log.info("indeed_http_blocked_trying_browser", error=str(exc2))
+                            use_browser = True
+                if use_browser and not batch:
+                    try:
+                        if self.browser_fetch is not None:
+                            payload = await self.browser_fetch(html_url)
+                        else:
+                            if session is None:
+                                session = PublicPageFetcher()
+                                await session.__aenter__()
+                            payload = await session.fetch(html_url)
+                        batch = parse_indeed_search(
+                            payload, base=f"https://{self.country_host}"
+                        )
+                    except CollectorError as exc3:
+                        last_error = exc3
+                for vacancy in batch:
+                    if vacancy.external_id in seen:
+                        continue
+                    seen.add(vacancy.external_id)
+                    vacancies.append(vacancy)
+                    if len(vacancies) >= self.max_per_portal:
+                        return vacancies
+        finally:
+            if session is not None:
+                await session.__aexit__(None, None, None)
         if not vacancies and last_error:
             raise last_error
         return vacancies

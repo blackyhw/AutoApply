@@ -17,7 +17,7 @@ class MockProvider:
     async def complete_json(self, request: LlmRequest) -> LlmResponse:
         if self._responder:
             data = self._responder(request)
-        elif request.schema_name == "match":
+        elif request.schema_name in {"match", "compose"}:
             data = MatchLlmOutput(
                 score=0.86,
                 should_apply=True,

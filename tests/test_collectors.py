@@ -1,12 +1,15 @@
 from pathlib import Path
 
+import pytest
+
 from autoapply.collectors.computrabajo import parse_computrabajo_search, merge_computrabajo_detail
-from autoapply.collectors.indeed import parse_indeed_search
+from autoapply.collectors.indeed import IndeedCollector, parse_indeed_search
 from autoapply.collectors.linkedin import parse_linkedin_search, merge_linkedin_detail
 from autoapply.collectors.parseutil import extract_apply_email
 from autoapply.collectors.queries import search_queries, slugify
 from autoapply.domain.enums import Portal
-from autoapply.domain.models import Profile, Vacancy
+from autoapply.domain.models import Profile
+from autoapply.errors import CollectorError
 from autoapply.profile.loader import load_profile
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -66,5 +69,38 @@ def test_parse_computrabajo_detail_fixture():
 def test_parse_indeed_search_fixture():
     html = (FIXTURES / "indeed_search.html").read_text(encoding="utf-8")
     jobs = parse_indeed_search(html)
+    assert [job.external_id for job in jobs] == ["abc123xyz", "def456uvw"]
+    assert jobs[0].company == "Acme Salud"
+
+
+class _BlockedClient:
+    async def get_text(self, url: str) -> str:
+        raise CollectorError("403")
+
+
+@pytest.mark.asyncio
+async def test_indeed_falls_back_to_browser_when_http_blocked():
+    html = (FIXTURES / "indeed_search.html").read_text(encoding="utf-8")
+    calls: list[str] = []
+
+    async def fake_browser(url: str) -> str:
+        calls.append(url)
+        return html
+
+    profile = Profile(
+        full_name="Ada",
+        dedicated_email="jobs-agent@example.com",
+        target_roles=["Python Developer"],
+        keywords=["python"],
+        locations=["Buenos Aires"],
+    )
+    collector = IndeedCollector(
+        client=_BlockedClient(),
+        max_per_portal=5,
+        browser_fetch=fake_browser,
+    )
+    jobs = await collector.collect(profile)
+    assert calls
+    assert all("ar.indeed.com/jobs" in url for url in calls)
     assert [job.external_id for job in jobs] == ["abc123xyz", "def456uvw"]
     assert jobs[0].company == "Acme Salud"

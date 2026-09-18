@@ -15,6 +15,7 @@ from autoapply.domain.enums import ApplicationStatus
 from autoapply.domain.models import Vacancy
 from autoapply.errors import CollectorError, CollectorNotConfigured, DailyApplyLimitReached, KillSwitchActive
 from autoapply.generator.blocks import BlockCatalog
+from autoapply.generator.compose import compose_application
 from autoapply.generator.cover_letter import ApplicationGenerator, CoverLetterRenderer
 from autoapply.generator.cv_assembler import CvAssembler
 from autoapply.heartbeat.reporter import HeartbeatReporter
@@ -55,7 +56,7 @@ class Agent:
             gemini_model=self.settings.gemini_model,
             groq_model=self.settings.groq_model,
         )
-        self.matcher = Matcher(self.llm, self.catalog, self.settings.match_threshold)
+        self.matcher = Matcher(self.catalog, self.settings.match_threshold)
         self.collectors = build_collectors(self.settings)
         self.apply_engine = ApplyEngine(self.settings)
         self.notifier = CompositeNotifier(
@@ -66,7 +67,7 @@ class Agent:
             ]
         )
         self.inbox = ImapInbox(self.settings)
-        self.meeting_parser = MeetingParser(self.llm)
+        self.meeting_parser = MeetingParser(None)
 
     def _repo(self) -> Repository:
         return Repository(self._session_factory())
@@ -171,6 +172,7 @@ class Agent:
             )
             return "rejected"
 
+        decision = await compose_application(self.llm, self.catalog, vacancy, self.profile, decision)
         pdf_path = Path(self.settings.generated_dir) / f"{fingerprint[:16]}.pdf"
         package = self.generator.build(decision, self.profile, pdf_path=pdf_path)
         repo.save_application(

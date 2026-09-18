@@ -62,6 +62,9 @@ class BlockCatalog:
             for block in self._blocks.values()
         ]
 
+    def blocks(self):
+        return list(self._blocks.values())
+
     @property
     def ids(self) -> set[str]:
         return set(self._blocks)

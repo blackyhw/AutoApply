@@ -7,6 +7,7 @@ install:
 	python3 -m venv $(VENV)
 	$(VENV)/bin/pip install -U pip
 	$(VENV)/bin/pip install -e ".[dev]"
+	$(VENV)/bin/playwright install chromium
 
 test:
 	$(PY) -m pytest -q
